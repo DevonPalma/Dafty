@@ -1,46 +1,44 @@
 #include <Arduino.h>
 #include "LEDLayouts.h"
-#include "AnimationScheduler.h"
 #include "Button.h"
-#include "Debug.h"
+#include "StateMachine.h"
 
-// The ONLY RGB framebuffer. Allocated internally by Adafruit_NeoPixel.
+// Single shared NeoPixel buffer and one state machine.
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-AnimationScheduler scheduler;
+StateMachine machine;
 Button button;
-uint8_t activePlaylist = 0;
 
-void nextPlaylist()
-{
-  activePlaylist = (activePlaylist + 1) % PLAYLIST_COUNT;
-  scheduler.play(activePlaylist);
-}
-void nextScene() { scheduler.next(); }
-void togglePlayback()
-{
-  if (scheduler.isRunning())
-    scheduler.stop();
-  else
-    scheduler.play(activePlaylist);
-}
+static const uint16_t FRAME_MS = 33; // ~30 FPS.
 
 void setup()
 {
-#if DEBUG_ENABLED || BENCHMARK_ENABLED
-  Serial.begin(115200);
-#endif
   pixels.begin();
   pixels.setBrightness(100);
   clearPixels();
   showPixels();
-  button.begin(2);
-  button.onClick(nextScene);
-  button.onDoubleClick(nextPlaylist);
-  button.onLongPress(togglePlayback);
-  scheduler.play(activePlaylist);
+
+  button.begin(BUTTON_PIN);
+  button.onClick(buttonPressed);
+  button.onDoubleClick(buttonDoublePressed);
+  button.onLongPress(buttonLongHeld);
+
+  machine.transition<IdleA>(4000);
 }
+
 void loop()
 {
+  // Handle input and time-based transitions as often as possible.
   button.update();
-  scheduler.update();
+  machine.event(Event::Tick);
+
+  // Only LED rendering is frame-limited.
+  static uint32_t lastFrame = millis();
+  const uint32_t now = millis();
+  if (now - lastFrame < FRAME_MS)
+    return;
+  lastFrame = now;
+
+  clearPixels();
+  machine.render();
+  showPixels();
 }

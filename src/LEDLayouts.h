@@ -7,6 +7,7 @@
 
 constexpr uint16_t LED_COUNT = 416;
 constexpr uint8_t LED_PIN = 6;
+constexpr uint8_t BUTTON_PIN = 2; // Active LOW, with internal pullup resistor.
 constexpr uint16_t INVALID_LED = 0xFFFF;
 extern Adafruit_NeoPixel pixels; // Defined once in main.cpp.
 
