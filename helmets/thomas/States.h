@@ -1,5 +1,5 @@
 #pragma once
-// Thomas Helmet Show: Two 20-LED visors, two 10-LED ears, and a 20-LED rear.
+// Thomas Helmet Show: Two 40-LED visor matrices with 2-LED ear regions.
 // The state is a renderer + event handler bound together at compile time.
 // No heap allocations, no animation registries, and no separate framebuffers.
 #include <Arduino.h>
@@ -29,25 +29,23 @@ using PartyRush = State<partyRush, partyRushEvents>;
 using Alert = State<alertFlash, alertFlashEvents>;
 
 // ---------------------------------------------------------------------------
-// RENDERERS: combine existing reusable strip effects.
-// Individual strips are addressed by compile-time LEDLayouts aliases.
+// RENDERERS: combine existing reusable effects.
+// LED regions are addressed by compile-time LEDLayouts aliases.
 // ---------------------------------------------------------------------------
 
 inline void ambientGlow(const StateContext& ctx) {
-  // Calm, asymmetrical color breathing, with a soft rear trail.
+  // Calm, asymmetrical color breathing.
   pulse<LeftVisor>(Cyan, ctx.elapsedMs, 2800);
   pulse<RightVisor>(Purple, ctx.elapsedMs + 950, 2800);
   pulse<BothEars>(Blue, ctx.elapsedMs, 2200);
-  comet<Rear>(Cyan, ctx.elapsedMs, 3400, 6);
 }
 
 inline void ambientChase(const StateContext& ctx) {
-  // Two independent tracer beams race across the visor strips.
+  // Two independent tracer beams race across the visor matrices.
   comet<LeftVisor>(Cyan, ctx.elapsedMs, 1350, 6);
   comet<RightVisor>(Purple, ctx.elapsedMs, 1600, 6);
   pulse<LeftEar>(Purple, ctx.elapsedMs, 1200);
   pulse<RightEar>(Cyan, ctx.elapsedMs + 600, 1200);
-  comet<Rear>(White, ctx.elapsedMs, 1900, 7);
 }
 
 inline void ambientCharge(const StateContext& ctx) {
@@ -55,21 +53,18 @@ inline void ambientCharge(const StateContext& ctx) {
   wipe<LeftVisor>(Cyan, ctx.elapsedMs, 2400);
   wipe<RightVisor>(Purple, ctx.elapsedMs, 2400);
   pulse<BothEars>(Yellow, ctx.elapsedMs, 800);
-  pulse<Rear>(Blue, ctx.elapsedMs, 2400);
 }
 
 inline void partyFlow(const StateContext& ctx) {
   rainbow<BothVisors>(ctx.elapsedMs, 1800);
   comet<LeftEar>(Cyan, ctx.elapsedMs, 600, 4);
   comet<RightEar>(Purple, ctx.elapsedMs, 750, 4);
-  rainbow<Rear>(ctx.elapsedMs, 2100);
 }
 
 inline void partyRush(const StateContext& ctx) {
   comet<LeftVisor>(White, ctx.elapsedMs, 430, 8);
   comet<RightVisor>(Cyan, ctx.elapsedMs, 530, 8);
   rainbow<BothEars>(ctx.elapsedMs, 800);
-  rainbow<Rear>(ctx.elapsedMs, 650);
 }
 
 inline void alertFlash(const StateContext& ctx) {
@@ -78,7 +73,6 @@ inline void alertFlash(const StateContext& ctx) {
   if (on) {
     solid<BothVisors>(Red);
     solid<BothEars>(Yellow);
-    solid<Rear>(Red);
   }
 }
 
