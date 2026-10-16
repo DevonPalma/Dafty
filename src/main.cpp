@@ -9,11 +9,11 @@ Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 StateMachine machine;
 Button button;
 
-static const uint16_t FRAME_MS = 33; // ~30 FPS.
+static const uint16_t FRAME_MS = 1000 / FPS;
 
 void setup() {
   pixels.begin();
-  pixels.setBrightness(100);
+  pixels.setBrightness(LED_BRIGHTNESS);
   clearPixels();
   showPixels();
 

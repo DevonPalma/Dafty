@@ -1,5 +1,5 @@
 #pragma once
-// HELMET 2 SHOW: Two 20-LED visors, two 10-LED ears, and a 20-LED rear.
+// Thomas Helmet Show: Two 20-LED visors, two 10-LED ears, and a 20-LED rear.
 // The state is a renderer + event handler bound together at compile time.
 // No heap allocations, no animation registries, and no separate framebuffers.
 #include <Arduino.h>

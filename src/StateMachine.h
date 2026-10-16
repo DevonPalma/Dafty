@@ -1,11 +1,6 @@
 #pragma once
-// HELMET 1 SHOWCASE: 48x8 matrix between two 16-pixel rings.
-// Every state is a compile-time pair of a renderer and its event handler.
-// Button actions and all transition rules live in this header.
-// No scene arrays, heap allocation, or extra LED framebuffers.
+
 #include <Arduino.h>
-// #include "LEDLayouts.h"
-// #include "animations/Animations.h"
 
 struct StateContext {
   uint32_t elapsedMs; // Resets whenever the state is entered.

@@ -1,9 +1,14 @@
 #pragma once
-// Helmet 2 only: pin assignments and geometry aliases.
 #include "LEDGeometry.h"
+
+// Thomas Config
+
 constexpr uint16_t LED_COUNT = 80;
 constexpr uint8_t LED_PIN = 6;
 constexpr uint8_t BUTTON_PIN = 2;
+constexpr uint8_t LED_BRIGHTNESS = 100; // 0..255
+constexpr uint8_t FPS = 30; // frames per second
+
 using All        = Strip<0, 80>;
 using LeftVisor  = Strip<0, 20>;
 using RightVisor = Strip<20, 20>;

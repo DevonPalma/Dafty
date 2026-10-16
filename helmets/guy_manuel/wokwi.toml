@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = "../../.pio/build/guy_manuel/firmware.hex"
+elf = "../../.pio/build/guy_manuel/firmware.elf"

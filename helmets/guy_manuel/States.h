@@ -1,5 +1,5 @@
 #pragma once
-// HELMET 1 SHOWCASE: 48x8 matrix between two 16-pixel rings.
+// Guy Manuel Helmet Show: 48x8 matrix between two 16-pixel rings.
 // Every state is a compile-time pair of a renderer and its event handler.
 // Button actions and all transition rules live in this header.
 // No scene arrays, heap allocation, or extra LED framebuffers.

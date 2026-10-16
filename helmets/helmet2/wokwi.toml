@@ -1,4 +1,0 @@
-[wokwi]
-version = 1
-firmware = "../../.pio/build/helmet2/firmware.hex"
-elf = "../../.pio/build/helmet2/firmware.elf"
