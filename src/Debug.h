@@ -12,14 +12,14 @@
 
 #if DEBUG_ENABLED
 
-  #define DEBUG_START()    Serial.begin(115200)
-  #define DEBUG_PRINT(x)   Serial.print(x)
-  #define DEBUG_PRINTLN(x) Serial.println(x)
+#define DEBUG_START() Serial.begin(115200)
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
 
 #else
 
-  #define DEBUG_START()    ((void)0)
-  #define DEBUG_PRINT(x)   ((void)0)
-  #define DEBUG_PRINTLN(x) ((void)0)
+#define DEBUG_START() ((void)0)
+#define DEBUG_PRINT(x) ((void)0)
+#define DEBUG_PRINTLN(x) ((void)0)
 
 #endif

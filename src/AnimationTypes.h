@@ -1,32 +1,99 @@
 #pragma once
-#include <Arduino.h>
-#include <string.h>
-#include "LEDShapes.h"
+// Compact Flash-only effect descriptions. All scene arrays remain PROGMEM.
+#include "LEDLayouts.h"
+#include "FlashStorage.h"
 
-// INTERNAL RENDER ADAPTER, NOT A PLAYLIST FORMAT
-// The Flash scheduler builds ONE temporary Effect on the stack while
-// rendering a FlashEffect. Permanent definitions live in PROGMEM.
-// Legacy fluent builders have been removed to prevent accidentally bringing
-// RAM-backed effects back into the program.
-//
-// The maximum settings size among the existing effects is below 24 bytes.
-#define EFFECT_CONFIG_BYTES 24
-
-struct Effect;
-typedef void (*EffectRender)(const Effect&, const LEDSection&, float);
-
-struct Effect {
-  const LEDShape* shape;      // Optional STACK-owned geometry view.
-  const LEDSection* section;  // STACK-owned section snapshot.
-  EffectRender render;        // Renderer function (code lives in Flash).
-  uint8_t config[EFFECT_CONFIG_BYTES]; // One effect's settings, temporarily.
+enum class EffectKind : uint8_t
+{
+  Solid,
+  Fade,
+  Pulse,
+  Wipe,
+  Rainbow,
+  Comet,
+  Equalizer,
+  Scanner,
+  Glitch,
+  NeonSteps,
+  MatrixDot,
+  RingChase,
+  MatrixTest
+};
+enum class Target : uint8_t
+{
+  All,
+  LeftRing,
+  FacePanel,
+  RightRing,
+  BothRings,
+  LeftRingShape,
+  FaceMatrix,
+  RightRingShape
+};
+struct FlashParams
+{
+  Color a, b;
+  float f1, f2;
+  uint8_t n1, n2;
+  bool flag;
+};
+struct FlashEffect
+{
+  EffectKind kind;
+  Target target;
+  uint32_t duration;
+  FlashParams parameters;
 };
 
-// Settings structs must be trivially copyable and <= EFFECT_CONFIG_BYTES.
-template<typename T>
-inline T effectSettings(const Effect& effect) {
-  static_assert(sizeof(T) <= EFFECT_CONFIG_BYTES, "Effect settings too large");
-  T settings;
-  memcpy(&settings, effect.config, sizeof(T));
-  return settings;
-}
+#define FX_SOLID(t, c, ms)                                    \
+  {                                                           \
+    EffectKind::Solid, t, ms, { c, Black, 0, 0, 0, 0, false } \
+  }
+#define FX_FADE(t, a, b, ms)                             \
+  {                                                      \
+    EffectKind::Fade, t, ms, { a, b, 0, 0, 0, 0, false } \
+  }
+#define FX_PULSE(t, c, ms)                                    \
+  {                                                           \
+    EffectKind::Pulse, t, ms, { c, Black, 0, 0, 0, 0, false } \
+  }
+#define FX_WIPE(t, c, ms)                                    \
+  {                                                          \
+    EffectKind::Wipe, t, ms, { c, Black, 0, 0, 0, 0, false } \
+  }
+#define FX_RAINBOW(t, ms, speed, rev)                                 \
+  {                                                                   \
+    EffectKind::Rainbow, t, ms, { Black, Black, speed, 0, 0, 0, rev } \
+  }
+#define FX_COMET(t, a, b, ms, s1, s2, trail)                    \
+  {                                                             \
+    EffectKind::Comet, t, ms, { a, b, s1, s2, trail, 0, false } \
+  }
+#define FX_EQUALIZER(t, a, b, ms, bars, beats)                       \
+  {                                                                  \
+    EffectKind::Equalizer, t, ms, { a, b, 0, 0, bars, beats, false } \
+  }
+#define FX_SCANNER(t, c, ms, trail, sweeps)                              \
+  {                                                                      \
+    EffectKind::Scanner, t, ms, { c, Black, 0, 0, trail, sweeps, false } \
+  }
+#define FX_GLITCH(t, a, b, ms, blocks, changes)                       \
+  {                                                                   \
+    EffectKind::Glitch, t, ms, { a, b, 0, 0, blocks, changes, false } \
+  }
+#define FX_NEONSTEPS(t, a, b, ms, width, cycles)                       \
+  {                                                                    \
+    EffectKind::NeonSteps, t, ms, { a, b, 0, 0, width, cycles, false } \
+  }
+#define FX_MATRIXDOT(t, c, ms)                                    \
+  {                                                               \
+    EffectKind::MatrixDot, t, ms, { c, Black, 0, 0, 0, 0, false } \
+  }
+#define FX_RINGCHASE(t, c, ms)                                    \
+  {                                                               \
+    EffectKind::RingChase, t, ms, { c, Black, 0, 0, 0, 0, false } \
+  }
+#define FX_MATRIXTEST(t, ms)                                           \
+  {                                                                    \
+    EffectKind::MatrixTest, t, ms, { Black, Black, 0, 0, 0, 0, false } \
+  }

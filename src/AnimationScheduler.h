@@ -10,7 +10,8 @@
 #include "Debug.h"
 #include "Benchmark.h"
 
-class AnimationScheduler {
+class AnimationScheduler
+{
   uint8_t playlistIndex = 0;
   uint8_t sceneIndex = 0;
   bool running = false;
@@ -22,23 +23,29 @@ class AnimationScheduler {
   Benchmark benchmark;
 #endif
 
-  Playlist selected() const {
+  Playlist selected() const
+  {
     return flashRead(&playlists[playlistIndex]);
   }
 
-  Scene currentScene() const {
+  Scene currentScene() const
+  {
     Playlist p = selected();
     return flashRead(p.scenes + sceneIndex);
   }
 
-  void advance(unsigned long at) {
+  void advance(unsigned long at)
+  {
     Playlist p = selected();
-    if (++sceneIndex >= p.sceneCount) {
-      if (p.repeat) sceneIndex = 0;
-      else {
+    if (++sceneIndex >= p.sceneCount)
+    {
+      if (p.repeat)
+        sceneIndex = 0;
+      else
+      {
         running = false;
-        leds.clear();
-        leds.show();
+        clearPixels();
+        showPixels();
         return;
       }
     }
@@ -46,8 +53,10 @@ class AnimationScheduler {
   }
 
 public:
-  void play(uint8_t index) {
-    if (index >= PLAYLIST_COUNT) return;
+  void play(uint8_t index)
+  {
+    if (index >= PLAYLIST_COUNT)
+      return;
     playlistIndex = index;
     sceneIndex = 0;
     running = true;
@@ -60,39 +69,50 @@ public:
     DEBUG_PRINTLN(index);
   }
 
-  void next() {
-    if (!running) return;
+  void next()
+  {
+    if (!running)
+      return;
     advance(millis());
     lastFrame = millis() - FRAME_MS;
   }
 
-  void stop() {
+  void stop()
+  {
     running = false;
-    leds.clear();
-    leds.show();
+    clearPixels();
+    showPixels();
   }
 
   bool isRunning() const { return running; }
 
-  void update() {
-    if (!running) return;
+  void update()
+  {
+    if (!running)
+      return;
     const unsigned long now = millis();
-    if ((unsigned long)(now - lastFrame) < FRAME_MS) return;
+    if ((unsigned long)(now - lastFrame) < FRAME_MS)
+      return;
     lastFrame = now;
 
     Playlist p = selected();
     Scene scene = currentScene();
-    for (uint8_t hops = 0; hops < p.sceneCount && running; ++hops) {
-      if (scene.duration && (unsigned long)(now - sceneStart) < scene.duration) break;
+    for (uint8_t hops = 0; hops < p.sceneCount && running; ++hops)
+    {
+      if (scene.duration && (unsigned long)(now - sceneStart) < scene.duration)
+        break;
       const unsigned long nextStart = scene.duration ? sceneStart + scene.duration : now;
       advance(nextStart);
-      if (!running) return;
+      if (!running)
+        return;
       scene = currentScene();
     }
 
-    if (!scene.duration) return;
+    if (!scene.duration)
+      return;
     unsigned long elapsed = now - sceneStart;
-    if (elapsed >= scene.duration) {
+    if (elapsed >= scene.duration)
+    {
       sceneStart = now;
       elapsed = 0;
     }
@@ -103,10 +123,12 @@ public:
     const uint32_t frameStartUs = micros();
 #endif
 
-    leds.clear();
-    for (uint8_t i = 0; i < scene.effectCount; ++i) {
+    clearPixels();
+    for (uint8_t i = 0; i < scene.effectCount; ++i)
+    {
       FlashEffect effect = flashRead(scene.effects + i);
-      if (!effect.duration) continue;
+      if (!effect.duration)
+        continue;
       const float progress = (float)(elapsed % effect.duration) / (float)effect.duration;
       renderFlashEffect(effect, progress);
     }
@@ -114,7 +136,7 @@ public:
 #if BENCHMARK_ENABLED
     const uint32_t showStartUs = micros();
 #endif
-    leds.show();
+    showPixels();
 #if BENCHMARK_ENABLED
     const uint32_t frameEndUs = micros();
     const uint32_t renderUs = showStartUs - frameStartUs;

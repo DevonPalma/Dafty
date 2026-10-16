@@ -1,62 +1,46 @@
-// APPLICATION ENTRY POINT
-// This file connects the hardware, button events, and animation scheduler.
-// For new patterns or playlists, edit Animations.h or AnimationPlaylist.h.
-// For LED wiring and named regions, edit LEDSections.h.
-// The loop stays nonblocking: call both update() methods every iteration.
-
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
-#include "Debug.h"
-#include "Button.h"
-#include "LEDController.h"
-
-LEDController leds;
-
-#include "AnimationPlaylist.h"
+#include "LEDLayouts.h"
 #include "AnimationScheduler.h"
+#include "Button.h"
+#include "Debug.h"
 
-constexpr uint8_t BUTTON_PIN = 2;
-Button button;
+// The ONLY RGB framebuffer. Allocated internally by Adafruit_NeoPixel.
+Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 AnimationScheduler scheduler;
-uint8_t selectedPlaylist = 0;
+Button button;
+uint8_t activePlaylist = 0;
 
-// Button controls: single click advances the scene, double click selects
-// the next playlist, and a long press stops playback and clears the LEDs.
-// These callbacks are registered in setup(); they run from button.update().
-void nextScene() {
-  if (scheduler.isRunning()) scheduler.next();
-  else scheduler.play(selectedPlaylist);
+void nextPlaylist()
+{
+  activePlaylist = (activePlaylist + 1) % PLAYLIST_COUNT;
+  scheduler.play(activePlaylist);
+}
+void nextScene() { scheduler.next(); }
+void togglePlayback()
+{
+  if (scheduler.isRunning())
+    scheduler.stop();
+  else
+    scheduler.play(activePlaylist);
 }
 
-void nextPlaylist() {
-  selectedPlaylist = (selectedPlaylist + 1) % PLAYLIST_COUNT;
-  scheduler.play(selectedPlaylist);
-}
-
-void stopShow() {
-  scheduler.stop();
-}
-
-// Startup order matters: register physical strips before initializing them,
-// then attach button handlers and start the first playlist.
-void setup() {
-  DEBUG_START();
-  DEBUG_PRINTLN(F("===== Helmet NeoPixel Controller ====="));
-  registerStrips();
-  leds.begin();
-
-  button.begin(BUTTON_PIN);
+void setup()
+{
+#if DEBUG_ENABLED || BENCHMARK_ENABLED
+  Serial.begin(115200);
+#endif
+  pixels.begin();
+  pixels.setBrightness(100);
+  clearPixels();
+  showPixels();
+  button.begin(2);
   button.onClick(nextScene);
   button.onDoubleClick(nextPlaylist);
-  button.onLongPress(stopShow);
-
-  scheduler.play(selectedPlaylist);
-  DEBUG_PRINTLN(F("[SYSTEM] Ready"));
+  button.onLongPress(togglePlayback);
+  scheduler.play(activePlaylist);
 }
-
-// Run both state machines frequently; do not add delay() here or button
-// gestures and animation frames will become less responsive.
-void loop() {
+void loop()
+{
   button.update();
   scheduler.update();
 }

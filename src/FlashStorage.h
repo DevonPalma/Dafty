@@ -5,7 +5,6 @@
 // On other architectures, normal const-data reads are sufficient.
 // Never use a PROGMEM pointer as a normal RAM pointer on AVR.
 
-
 #include <Arduino.h>
 #include <string.h>
 #if defined(__AVR__)
@@ -15,8 +14,9 @@
 #define SD_FLASH
 #endif
 
-template<typename T>
-inline T flashRead(const T* pointer) {
+template <typename T>
+inline T flashRead(const T *pointer)
+{
   T copy;
 #if defined(__AVR__)
   memcpy_P(&copy, pointer, sizeof(T));
