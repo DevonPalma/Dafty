@@ -2,6 +2,7 @@
 #include "LEDLayouts.h"
 #include "Button.h"
 #include "StateMachine.h"
+#include "States.h"
 
 // Single shared NeoPixel buffer and one state machine.
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -10,8 +11,7 @@ Button button;
 
 static const uint16_t FRAME_MS = 33; // ~30 FPS.
 
-void setup()
-{
+void setup() {
   pixels.begin();
   pixels.setBrightness(100);
   clearPixels();
@@ -22,11 +22,10 @@ void setup()
   button.onDoubleClick(buttonDoublePressed);
   button.onLongPress(buttonLongHeld);
 
-  machine.transition<IdleA>(4000);
+  startHelmet();
 }
 
-void loop()
-{
+void loop() {
   // Handle input and time-based transitions as often as possible.
   button.update();
   machine.event(Event::Tick);
@@ -34,8 +33,7 @@ void loop()
   // Only LED rendering is frame-limited.
   static uint32_t lastFrame = millis();
   const uint32_t now = millis();
-  if (now - lastFrame < FRAME_MS)
-    return;
+  if (now - lastFrame < FRAME_MS) return;
   lastFrame = now;
 
   clearPixels();

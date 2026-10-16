@@ -4,8 +4,7 @@
 // double-click window; a long hold fires once while pressed.
 #include <Arduino.h>
 
-class Button
-{
+class Button {
   uint8_t pin_ = 2;
   bool lastReading_ = HIGH;
   bool stable_ = HIGH;
@@ -20,10 +19,8 @@ class Button
   static const uint16_t DEBOUNCE_MS = 30;
   static const uint16_t DOUBLE_MS = 300;
   static const uint16_t LONG_MS = 700;
-
 public:
-  void begin(uint8_t pin = 2)
-  {
+  void begin(uint8_t pin = 2) {
     pin_ = pin;
     pinMode(pin_, INPUT_PULLUP);
     lastReading_ = stable_ = digitalRead(pin_);
@@ -33,52 +30,34 @@ public:
   void onDoubleClick(void (*fn)()) { double_ = fn; }
   void onLongPress(void (*fn)()) { long_ = fn; }
 
-  void update()
-  {
+  void update() {
     const uint32_t now = millis();
     const bool reading = digitalRead(pin_);
-    if (reading != lastReading_)
-      changedAt_ = now;
+    if (reading != lastReading_) changedAt_ = now;
     lastReading_ = reading;
 
-    if (reading != stable_ && now - changedAt_ >= DEBOUNCE_MS)
-    {
+    if (reading != stable_ && now - changedAt_ >= DEBOUNCE_MS) {
       stable_ = reading;
-      if (stable_ == LOW)
-      {
+      if (stable_ == LOW) {
         pressedAt_ = now;
         longFired_ = false;
-      }
-      else if (!longFired_)
-      {
-        if (clicks_ < 2)
-          ++clicks_;
+      } else if (!longFired_) {
+        if (clicks_ < 2) ++clicks_;
         releasedAt_ = now;
       }
     }
 
-    if (stable_ == LOW && !longFired_ && now - pressedAt_ >= LONG_MS)
-    {
+    if (stable_ == LOW && !longFired_ && now - pressedAt_ >= LONG_MS) {
       longFired_ = true;
       clicks_ = 0;
-      if (long_)
-        long_();
+      if (long_) long_();
     }
 
-    if (stable_ == HIGH && clicks_ && now - releasedAt_ >= DOUBLE_MS)
-    {
+    if (stable_ == HIGH && clicks_ && now - releasedAt_ >= DOUBLE_MS) {
       const uint8_t count = clicks_;
       clicks_ = 0;
-      if (count >= 2)
-      {
-        if (double_)
-          double_();
-      }
-      else
-      {
-        if (single_)
-          single_();
-      }
+      if (count >= 2) { if (double_) double_(); }
+      else { if (single_) single_(); }
     }
   }
 };

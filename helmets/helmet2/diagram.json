@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": -37.8, "left": -327, "attrs": {} },
+    {
+      "type": "wokwi-led-strip",
+      "id": "leftVisor",
+      "top": -324.3,
+      "left": 182.4,
+      "attrs": { "pixels": "20", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-led-strip",
+      "id": "rightVisor",
+      "top": -325.1,
+      "left": 724,
+      "rotate": 180,
+      "attrs": { "pixels": "20", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-led-strip",
+      "id": "leftEar",
+      "top": -153.7,
+      "left": 11,
+      "rotate": 90,
+      "attrs": { "pixels": "10", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-led-strip",
+      "id": "rightEar",
+      "top": -150.1,
+      "left": 1125.4,
+      "rotate": 270,
+      "attrs": { "pixels": "10", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-led-strip",
+      "id": "rear",
+      "top": -55.5,
+      "left": 393.6,
+      "attrs": { "pixels": "20", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 240,
+      "left": -145,
+      "rotate": 180,
+      "attrs": { "color": "green", "xray": "1" }
+    }
+  ],
+  "connections": [
+    [ "uno:6", "leftVisor:DIN", "green", [ "v-22", "h155.3", "v-258.8" ] ],
+    [ "leftVisor:DOUT", "rightVisor:DIN", "green", [ "h13.6", "v-38.8", "h537.6", "v38" ] ],
+    [ "rightVisor:DOUT", "leftEar:DIN", "green", [ "h-13.6", "v38.8", "h-576.4" ] ],
+    [ "leftEar:DOUT", "rightEar:DIN", "green", [ "v22.8", "h1114.4" ] ],
+    [ "rightEar:DOUT", "rear:DIN", "green", [ "v-13.2", "h-29.2", "v192", "h-835.2", "v38.8" ] ],
+    [ "uno:5V", "leftVisor:VDD", "red", [ "v35.5", "h184.2", "v-508.8" ] ],
+    [ "uno:GND.2", "leftVisor:VSS", "black", [ "v25.9", "h193.9", "v-479.2" ] ],
+    [ "leftVisor:VDD.2", "rightVisor:VDD", "red", [ "h4", "v-38.4", "h556.8", "v57.6" ] ],
+    [ "leftVisor:VSS.2", "rightVisor:VSS", "black", [ "h23.2", "v-39.2", "h518.4" ] ],
+    [ "rightVisor:VDD.2", "leftEar:VDD", "red", [ "h-4", "v38.4", "h-576" ] ],
+    [ "rightVisor:VSS.2", "leftEar:VSS", "black", [ "h-23.2", "v39.2", "h-576.8" ] ],
+    [ "leftEar:VDD.2", "rightEar:VDD", "red", [ "v13.2", "h1094.4" ] ],
+    [ "leftEar:VSS.2", "rightEar:VSS", "black", [ "v32.4", "h1134.4" ] ],
+    [ "rightEar:VDD.2", "rear:VDD", "red", [ "v-3.6", "h-9.6", "v192", "h-835.2" ] ],
+    [ "rightEar:VSS.2", "rear:VSS", "black", [ "v-22.8", "h-48.8", "v192", "h-835.2", "v58.4" ] ],
+    [ "uno:2", "btn1:2.l", "violet", [ "v-12.4", "h69.3", "v295.4" ] ],
+    [ "uno:GND.3", "btn1:1.r", "black", [] ]
+  ],
+  "dependencies": {}
+}

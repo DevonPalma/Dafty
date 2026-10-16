@@ -1,31 +1,13 @@
 #pragma once
-// Compile-time LED geometry. No sections, shape descriptors or lookup arrays.
-// Every index maps directly to the ONE physical NeoPixel chain.
-// Change these aliases to match your hardware, then rebuild.
+// Shared compile-time mapping. Adafruit_NeoPixel performs physical bounds checks.
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
-
-constexpr uint16_t LED_COUNT = 416;
-constexpr uint8_t LED_PIN = 6;
-constexpr uint8_t BUTTON_PIN = 2; // Active LOW, with internal pullup resistor.
+#include "Color.h"
 constexpr uint16_t INVALID_LED = 0xFFFF;
-extern Adafruit_NeoPixel pixels; // Defined once in main.cpp.
-
-struct Color
-{
-  uint8_t r, g, b;
-};
-constexpr Color Red = {255, 0, 0}, Green = {0, 255, 0}, Blue = {0, 0, 255};
-constexpr Color Purple = {160, 0, 255}, Yellow = {255, 200, 0}, Cyan = {0, 255, 255};
-constexpr Color White = {255, 255, 255}, Black = {0, 0, 0};
-inline Color RGB(uint8_t r, uint8_t g, uint8_t b) { return {r, g, b}; }
-
-inline void writePhysical(uint16_t i, Color c)
-{
-  if (i < LED_COUNT)
-    pixels.setPixelColor(i, c.r, c.g, c.b);
+extern Adafruit_NeoPixel pixels;
+inline void writePhysical(uint16_t i, Color c) {
+  if (i != INVALID_LED) pixels.setPixelColor(i, c.r, c.g, c.b);
 }
-
 enum class MatrixOrder : uint8_t
 {
   Rows,
@@ -111,15 +93,5 @@ struct Group
   static inline void setXY(uint16_t x, uint16_t y, Color c) { writePhysical(indexXY(x, y), c); }
 };
 
-// Single electrical chain: ring 0..15, face 16..399, ring 400..415.
-using All = Strip<0, 416>;
-using LeftRing = Ring<0, 16>;
-using FacePanel = Strip<16, 384>;
-using FaceMatrix = Matrix<16, 48, 8, MatrixOrder::Rows, false>; // progressive Wokwi
-using RightRing = Ring<400, 16>;
-using BothRings = Group<LeftRing, RightRing>;
-// When switching Wokwi matrix to serpentine, change ONLY the last false above.
-
-// Fast section clearing uses the NeoPixel buffer directly (doesn't transmit).
 inline void clearPixels() { pixels.clear(); }
 inline void showPixels() { pixels.show(); }
