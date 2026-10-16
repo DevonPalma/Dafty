@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": -37.8, "left": -327, "attrs": {} },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 240,
+      "left": -145,
+      "rotate": 180,
+      "attrs": { "color": "green", "xray": "1" }
+    },
+    {
+      "type": "wokwi-led-matrix",
+      "id": "matrix1",
+      "top": 253.2,
+      "left": 179,
+      "attrs": { "rows": "8", "cols": "48", "pixelShape": "square" }
+    },
+    {
+      "type": "wokwi-led-ring",
+      "id": "ring1",
+      "top": 403.84,
+      "left": -18.01,
+      "attrs": { "pixels": "16" }
+    },
+    {
+      "type": "wokwi-led-ring",
+      "id": "ring2",
+      "top": 394.24,
+      "left": 1335.59,
+      "attrs": { "pixels": "16" }
+    }
+  ],
+  "connections": [
+    [ "uno:2", "btn1:2.l", "violet", [ "v-12.4", "h69.3", "v295.4" ] ],
+    [ "uno:GND.3", "btn1:1.r", "black", [] ],
+    [ "ring1:VCC", "uno:5V", "red", [ "v28.8", "h-215" ] ],
+    [ "ring1:GND", "uno:GND.2", "black", [ "v19.2", "h-192", "h-3.9" ] ],
+    [
+      "uno:6",
+      "ring1:DIN",
+      "green",
+      [ "v-19.2", "h118.9", "v345.6", "h-134.4", "v268.8", "h201.6" ]
+    ],
+    [ "ring1:DOUT", "matrix1:DIN", "green", [ "v9.6", "h652.8" ] ],
+    [ "matrix1:DOUT", "ring2:DIN", "green", [ "v115.2", "h661.2" ] ],
+    [ "ring1:VCC", "matrix1:VDD", "red", [ "v28.8", "h682" ] ],
+    [ "matrix1:VDD", "ring2:VCC", "red", [ "v134.4", "h671.6" ] ],
+    [ "ring2:GND", "matrix1:VSS", "black", [ "v28.8", "h-652" ] ],
+    [ "matrix1:VSS", "ring1:GND", "black", [ "v124.8", "h-701.6" ] ]
+  ],
+  "dependencies": {}
+}
