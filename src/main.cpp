@@ -3,6 +3,9 @@
 #include "Button.h"
 #include "StateMachine.h"
 #include "States.h"
+#ifdef DAFTY_ENABLE_BLE
+#include "BluetoothText.h"
+#endif
 
 // Single shared NeoPixel buffer and one state machine.
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -22,12 +25,19 @@ void setup() {
   button.onDoubleClick(buttonDoublePressed);
   button.onLongPress(buttonLongHeld);
 
+#ifdef DAFTY_ENABLE_BLE
+  bluetoothText::begin(); // Show still works when BLE is unavailable.
+#endif
   startHelmet();
 }
 
 void loop() {
   // Handle input and time-based transitions as often as possible.
   button.update();
+#ifdef DAFTY_ENABLE_BLE
+  bluetoothText::poll();
+  if (bluetoothText::takeNewMessage()) helmetOnTextMessage();
+#endif
   machine.event(Event::Tick);
 
   // Only LED rendering is frame-limited.

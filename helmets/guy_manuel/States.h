@@ -1,5 +1,5 @@
 #pragma once
-// Guy Manuel Helmet Show: 48x8 matrix between two 16-pixel rings.
+// Guy Manuel Helmet Show: a single 48x8 matrix.
 // Every state is a compile-time pair of a renderer and its event handler.
 // Button actions and all transition rules live in this header.
 // No scene arrays, heap allocation, or extra LED framebuffers.
@@ -7,6 +7,12 @@
 #include "LEDLayouts.h"
 #include "Animations.h"
 #include "StateMachine.h"
+#ifdef DAFTY_ENABLE_BLE
+#include "BluetoothText.h"
+#include "Commands.h"
+#include "SpecialAnimations.h"
+#include "TextAnimations.h"
+#endif
 
 // Forward declarations are required for compile-time state bindings.
 inline void ambientDream(const StateContext&);
@@ -15,6 +21,12 @@ inline void ambientSweep(const StateContext&);
 inline void partyPrism(const StateContext&);
 inline void partyChaos(const StateContext&);
 inline void alertSignal(const StateContext&);
+#ifdef DAFTY_ENABLE_BLE
+inline void messageRender(const StateContext&);
+inline void messageEvents(Event);
+inline void specialRender(const StateContext&);
+inline void specialEvents(Event);
+#endif
 inline void ambientDreamEvents(Event);
 inline void ambientSpectrumEvents(Event);
 inline void ambientSweepEvents(Event);
@@ -28,48 +40,47 @@ using Sweep = State<ambientSweep, ambientSweepEvents>;
 using Party = State<partyPrism, partyPrismEvents>;
 using PartyChaos = State<partyChaos, partyChaosEvents>;
 using Alert = State<alertSignal, alertSignalEvents>;
+#ifdef DAFTY_ENABLE_BLE
+using Message = State<messageRender, messageEvents>;
+using SpecialSequence = State<specialRender, specialEvents>;
+#endif
 
 // ========================================================================
 // STATE RENDERERS
-// Different animations run concurrently on the rings and matrix.
+// All animations draw directly to the face matrix.
 // main.cpp clears the framebuffer once before calling machine.render().
 // ========================================================================
 
 inline void ambientDream(const StateContext& ctx) {
-  // Relaxed moving cyan wave over a dark display, with breathing rings.
+  // Relaxed moving cyan wave and digital rain.
   matrixWave<FaceMatrix>(Cyan, ctx.elapsedMs, 3600, 2);
   matrixRain<FaceMatrix>(Blue, ctx.elapsedMs, 210, 7, 2);
-  ringBreathe<LeftRing>(Purple, ctx.elapsedMs, 2500);
-  ringBreathe<RightRing>(Cyan, ctx.elapsedMs + 900, 2500);
+
 }
 
 inline void ambientSpectrum(const StateContext& ctx) {
   // Synthetic equalizer, 16 slim bars with smoothly changing heights.
   matrixEqualizer<FaceMatrix>(Cyan, Purple, ctx.elapsedMs, 4000, 16, 12);
-  ringChase<LeftRing>(Cyan, ctx.elapsedMs, 2000, 4);
-  ringChase<RightRing>(Purple, ctx.elapsedMs, 1600, 4);
+
 }
 
 inline void ambientSweep(const StateContext& ctx) {
-  // Sharp vertical scanner with a glowing trail and opposing ring tracers.
+  // Sharp vertical scanner with a glowing trail.
   matrixScanner<FaceMatrix>(White, ctx.elapsedMs, 2300, 3);
-  ringDualChase<LeftRing>(Cyan, Blue, ctx.elapsedMs, 2200, 3);
-  ringDualChase<RightRing>(Purple, Cyan, ctx.elapsedMs, 2200, 3);
+
 }
 
 inline void partyPrism(const StateContext& ctx) {
-  // Whole face fills with shifting color. Rings spin at different speeds.
+  // Whole face fills with shifting color.
   matrixRainbow<FaceMatrix>(ctx.elapsedMs, 2100);
-  ringDualChase<LeftRing>(Cyan, Purple, ctx.elapsedMs, 900, 4);
-  ringDualChase<RightRing>(Purple, Yellow, ctx.elapsedMs, 1100, 4);
+
 }
 
 inline void partyChaos(const StateContext& ctx) {
-  // Glitch blocks over a moving wave, plus fast changing ring sparkles.
+  // Glitch blocks over a moving wave.
   matrixWave<FaceMatrix>(Cyan, ctx.elapsedMs, 1100, 3);
   matrixGlitch<FaceMatrix>(Purple, White, ctx.elapsedMs, 125, 11);
-  ringSparkle<LeftRing>(Cyan, ctx.elapsedMs, 110, 4);
-  ringSparkle<RightRing>(Purple, ctx.elapsedMs + 60, 130, 4);
+
 }
 
 inline void alertSignal(const StateContext& ctx) {
@@ -77,10 +88,9 @@ inline void alertSignal(const StateContext& ctx) {
   const bool lit = (ctx.elapsedMs / 300u) % 2u == 0;
   if (lit) {
     solid<FacePanel>(Red);
-    solid<BothRings>(Yellow);
   } else {
     matrixScanner<FaceMatrix>(Red, ctx.elapsedMs, 650, 1);
-    ringChase<BothRings>(Red, ctx.elapsedMs, 650, 2);
+
   }
 }
 
@@ -200,3 +210,70 @@ inline void alertSignalEvents(Event e) {
 inline void startHelmet() {
     machine.transition<IdleA>(4000);
 }
+#ifdef DAFTY_ENABLE_BLE
+// The text animation owns all display-mode rendering and timing.
+// States only decide what happens when that animation is finished.
+inline void commandDestination() {
+  using namespace guyCommands;
+  switch (current.next) {
+    case Destination::Dream:    machine.transition<IdleA>(4000); break;
+    case Destination::Spectrum: machine.transition<IdleB>(4000); break;
+    case Destination::Sweep:    machine.transition<Sweep>(3800); break;
+    case Destination::Party:    machine.transition<Party>(3200); break;
+    case Destination::Chaos:    machine.transition<PartyChaos>(2800); break;
+    case Destination::Alert:    machine.transition<Alert>(1800); break;
+  }
+}
+
+inline void messageRender(const StateContext& ctx) {
+  textAnimation<FaceMatrix>(ctx.elapsedMs);
+}
+
+inline void messageEvents(Event e) {
+  switch (e) {
+    case Event::Tick:
+      if (machine.elapsed() >= textAnimationDuration<FaceMatrix>()) commandDestination();
+      break;
+    case Event::ButtonPressed:
+    case Event::ButtonLongHeld:
+      machine.transition<IdleA>(4000);
+      break;
+    case Event::ButtonDoublePressed:
+      machine.transition<Party>(3200);
+      break;
+  }
+}
+
+inline void specialRender(const StateContext& ctx) {
+  switch (guyCommands::current.special) {
+    case guyCommands::Special::WorkIt: workIt<FaceMatrix>(ctx.elapsedMs); break;
+    case guyCommands::Special::HeartEyes: heartEyes<FaceMatrix>(ctx.elapsedMs); break;
+    default: break;
+  }
+}
+inline void specialEvents(Event e) {
+  switch (e) {
+    case Event::Tick:
+      if (machine.finished()) machine.transition<IdleA>(4000);
+      break;
+    case Event::ButtonPressed:
+    case Event::ButtonLongHeld:
+      machine.transition<IdleA>(4000);
+      break;
+    case Event::ButtonDoublePressed:
+      machine.transition<Party>(3200);
+      break;
+  }
+}
+
+// Called from main.cpp only in Guy Manuel's BLE build.
+inline void helmetOnTextMessage() {
+  guyCommands::parse(bluetoothText::message());
+  if (guyCommands::current.special == guyCommands::Special::WorkIt)
+    machine.transition<SpecialSequence>(7200);
+  else if (guyCommands::current.special == guyCommands::Special::HeartEyes)
+    machine.transition<SpecialSequence>(6000);
+  else if (guyText::current.message[0])
+    machine.transition<Message>();
+}
+#endif
