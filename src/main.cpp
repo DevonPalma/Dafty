@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "LEDLayouts.h"
+#ifndef DAFTY_GUY_MANUEL
 #include "Button.h"
+#endif
 #include "StateMachine.h"
 #include "States.h"
 #ifdef DAFTY_ENABLE_BLE
@@ -10,7 +12,9 @@
 // Single shared NeoPixel buffer and one state machine.
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 StateMachine machine;
+#ifndef DAFTY_GUY_MANUEL
 Button button;
+#endif
 
 static const uint16_t FRAME_MS = 1000UL / FPS;
 
@@ -20,10 +24,12 @@ void setup() {
   clearPixels();
   showPixels();
 
+  #ifndef DAFTY_GUY_MANUEL
   button.begin(BUTTON_PIN);
   button.onClick(buttonPressed);
   button.onDoubleClick(buttonDoublePressed);
   button.onLongPress(buttonLongHeld);
+  #endif
 
 #ifdef DAFTY_ENABLE_BLE
   bluetoothText::begin(); // Show still works when BLE is unavailable.
@@ -33,7 +39,9 @@ void setup() {
 
 void loop() {
   // Handle input and time-based transitions as often as possible.
+  #ifndef DAFTY_GUY_MANUEL
   button.update();
+  #endif
 #ifdef DAFTY_ENABLE_BLE
   bluetoothText::poll();
   if (bluetoothText::takeNewMessage()) helmetOnTextMessage();

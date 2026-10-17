@@ -1,8 +1,6 @@
 #pragma once
-// Guy Manuel Helmet Show: a single 48x8 matrix.
-// Every state is a compile-time pair of a renderer and its event handler.
-// Button actions and all transition rules live in this header.
-// No scene arrays, heap allocation, or extra LED framebuffers.
+// Guy Manuel owns all BLE commands, state selection and transition policy.
+// No physical button is required. All animation functions draw one frame.
 #include <Arduino.h>
 #include "LEDLayouts.h"
 #include "Animations.h"
@@ -10,270 +8,221 @@
 #ifdef DAFTY_ENABLE_BLE
 #include "BluetoothText.h"
 #include "commands/Commands.h"
-#include "animations/SpecialAnimations.h"
 #include "animations/TextAnimations.h"
+#include "animations/SpecialAnimations.h"
 #endif
 
-// Forward declarations are required for compile-time state bindings.
-inline void ambientDream(const StateContext&);
-inline void ambientSpectrum(const StateContext&);
-inline void ambientSweep(const StateContext&);
-inline void partyPrism(const StateContext&);
-inline void partyChaos(const StateContext&);
-inline void alertSignal(const StateContext&);
+inline void ambientDream(const StateContext &);
+inline void ambientSpectrum(const StateContext &);
+inline void ambientSweep(const StateContext &);
+inline void partyPrism(const StateContext &);
+inline void partyChaos(const StateContext &);
+inline void alertSignal(const StateContext &);
+inline void idleEvents(Event);
+inline void otherEvents(Event);
 #ifdef DAFTY_ENABLE_BLE
-inline void messageRender(const StateContext&);
-inline void messageEvents(Event);
-inline void specialRender(const StateContext&);
+inline void textRender(const StateContext &);
+inline void textEvents(Event);
+inline void specialRender(const StateContext &);
 inline void specialEvents(Event);
 #endif
-inline void ambientDreamEvents(Event);
-inline void ambientSpectrumEvents(Event);
-inline void ambientSweepEvents(Event);
-inline void partyPrismEvents(Event);
-inline void partyChaosEvents(Event);
-inline void alertSignalEvents(Event);
-
-using IdleA = State<ambientDream, ambientDreamEvents>;       // main.cpp starts here
-using IdleB = State<ambientSpectrum, ambientSpectrumEvents>;
-using Sweep = State<ambientSweep, ambientSweepEvents>;
-using Party = State<partyPrism, partyPrismEvents>;
-using PartyChaos = State<partyChaos, partyChaosEvents>;
-using Alert = State<alertSignal, alertSignalEvents>;
+using IdleA = State<ambientDream, idleEvents>;
+using IdleB = State<ambientSpectrum, idleEvents>;
+using Sweep = State<ambientSweep, idleEvents>;
+using Party = State<partyPrism, otherEvents>;
+using PartyChaos = State<partyChaos, otherEvents>;
+using Alert = State<alertSignal, otherEvents>;
 #ifdef DAFTY_ENABLE_BLE
-using Message = State<messageRender, messageEvents>;
+using Message = State<textRender, textEvents>;
 using SpecialSequence = State<specialRender, specialEvents>;
 #endif
 
-// ========================================================================
-// STATE RENDERERS
-// All animations draw directly to the face matrix.
-// main.cpp clears the framebuffer once before calling machine.render().
-// ========================================================================
-
-inline void ambientDream(const StateContext& ctx) {
-  // Relaxed moving cyan wave and digital rain.
-  matrixWave<FaceMatrix>(Cyan, ctx.elapsedMs, 3600, 2);
-  matrixRain<FaceMatrix>(Blue, ctx.elapsedMs, 210, 7, 2);
-
+inline void ambientDream(const StateContext &c)
+{
+  matrixWave<FaceMatrix>(Cyan, c.elapsedMs, 3600, 2);
+  matrixRain<FaceMatrix>(Blue, c.elapsedMs, 210, 7, 2);
+}
+inline void ambientSpectrum(const StateContext &c)
+{
+  matrixEqualizer<FaceMatrix>(Cyan, Purple, c.elapsedMs, 4000, 16, 12);
+}
+inline void ambientSweep(const StateContext &c)
+{
+  matrixScanner<FaceMatrix>(White, c.elapsedMs, 2300, 3);
+}
+inline void partyPrism(const StateContext &c)
+{
+  matrixRainbow<FaceMatrix>(c.elapsedMs, 2100);
+}
+inline void partyChaos(const StateContext &c)
+{
+  matrixWave<FaceMatrix>(Cyan, c.elapsedMs, 1100, 3);
+  matrixGlitch<FaceMatrix>(Purple, White, c.elapsedMs, 125, 11);
 }
 
-inline void ambientSpectrum(const StateContext& ctx) {
-  // Synthetic equalizer, 16 slim bars with smoothly changing heights.
-  matrixEqualizer<FaceMatrix>(Cyan, Purple, ctx.elapsedMs, 4000, 16, 12);
+inline void alertSignal(const StateContext &c)
+{
+  // Repeat the entire sequence every 5 seconds.
+  const uint32_t t = c.elapsedMs % 5000UL;
 
-}
-
-inline void ambientSweep(const StateContext& ctx) {
-  // Sharp vertical scanner with a glowing trail.
-  matrixScanner<FaceMatrix>(White, ctx.elapsedMs, 2300, 3);
-
-}
-
-inline void partyPrism(const StateContext& ctx) {
-  // Whole face fills with shifting color.
-  matrixRainbow<FaceMatrix>(ctx.elapsedMs, 2100);
-
-}
-
-inline void partyChaos(const StateContext& ctx) {
-  // Glitch blocks over a moving wave.
-  matrixWave<FaceMatrix>(Cyan, ctx.elapsedMs, 1100, 3);
-  matrixGlitch<FaceMatrix>(Purple, White, ctx.elapsedMs, 125, 11);
-
-}
-
-inline void alertSignal(const StateContext& ctx) {
-  // Brief red warning pattern; intentionally not a rapid strobe.
-  const bool lit = (ctx.elapsedMs / 300u) % 2u == 0;
-  if (lit) {
-    solid<FacePanel>(Red);
-  } else {
-    matrixScanner<FaceMatrix>(Red, ctx.elapsedMs, 650, 1);
-
+  // Flash red twice during the first 400 ms.
+  if (t < 400)
+  {
+    if ((t / 100) % 2 == 0)
+      solid<FacePanel>(Red);
+  }
+  else
+  {
+    // Scan continuously between flashes.
+    matrixScanner<FaceMatrix>(Red, c.elapsedMs, 650, 1);
   }
 }
 
-// ========================================================================
-// STATE TRANSITIONS
-// Timed ambient cycle: Dream -> Spectrum -> Sweep -> Dream ...
-//   Single: hold this ambient state; next single advances and holds.
-//   Double: party cycle Prism <-> Chaos.
-//   Long: resume timed ambient cycle from Dream.
-// Party: single triggers brief Alert; double holds the opposite party look.
-// Alert: after 1800 ms return to timed Party Prism.
-// ========================================================================
-
-inline void ambientDreamEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<IdleB>(4000);
-      break;
-    case Event::ButtonPressed:
-      if (machine.timed()) machine.transition<IdleA>();
-      else machine.transition<IdleB>();
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void ambientSpectrumEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<Sweep>(3800);
-      break;
-    case Event::ButtonPressed:
-      if (machine.timed()) machine.transition<IdleB>();
-      else machine.transition<Sweep>();
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void ambientSweepEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<IdleA>(4000);
-      break;
-    case Event::ButtonPressed:
-      if (machine.timed()) machine.transition<Sweep>();
-      else machine.transition<IdleA>();
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void partyPrismEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<PartyChaos>(2800);
-      break;
-    case Event::ButtonPressed:
-      machine.transition<Alert>(1800);
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<PartyChaos>();
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void partyChaosEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<Party>(3200);
-      break;
-    case Event::ButtonPressed:
-      machine.transition<Alert>(1800);
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>();
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void alertSignalEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<Party>(3200);
-      break;
-    case Event::ButtonPressed:
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
-      break;
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-  }
-}
-
-inline void startHelmet() {
+// The only autonomous cycle is &Idle: Dream -> Spectrum -> Sweep.
+inline void idleEvents(Event e)
+{
+  if (e != Event::Tick || !machine.finished())
+    return;
+  if (machine.is<IdleA>())
+    machine.transition<IdleB>(4000);
+  else if (machine.is<IdleB>())
+    machine.transition<Sweep>(3800);
+  else
     machine.transition<IdleA>(4000);
 }
+inline void otherEvents(Event) { /* Direct states hold until the next BLE command. */ }
+
 #ifdef DAFTY_ENABLE_BLE
-// The text animation owns all display-mode rendering and timing.
-// States only decide what happens when that animation is finished.
-inline void commandDestination() {
-  using namespace guyCommands;
-  switch (current.next) {
-    case Destination::Dream:    machine.transition<IdleA>(4000); break;
-    case Destination::Spectrum: machine.transition<IdleB>(4000); break;
-    case Destination::Sweep:    machine.transition<Sweep>(3800); break;
-    case Destination::Party:    machine.transition<Party>(3200); break;
-    case Destination::Chaos:    machine.transition<PartyChaos>(2800); break;
-    case Destination::Alert:    machine.transition<Alert>(1800); break;
-  }
-}
+namespace guyControl
+{
+  // One saved base appearance, not a state stack. An interrupting command
+  // replaces the previous temporary effect. Base mode survives messages.
+  static guyCommands::Destination base = guyCommands::Destination::Idle;
+  static guyCommands::Special activeSpecial = guyCommands::Special::None;
 
-inline void messageRender(const StateContext& ctx) {
-  textAnimation<FaceMatrix>(ctx.elapsedMs);
-}
-
-inline void messageEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.elapsed() >= textAnimationDuration<FaceMatrix>()) commandDestination();
-      break;
-    case Event::ButtonPressed:
-    case Event::ButtonLongHeld:
+  inline void enterBase(guyCommands::Destination d)
+  {
+    using guyCommands::Destination;
+    base = d;
+    switch (d)
+    {
+    case Destination::Idle:
       machine.transition<IdleA>(4000);
       break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
+    case Destination::Dream:
+      machine.transition<IdleA>();
       break;
+    case Destination::Spectrum:
+      machine.transition<IdleB>();
+      break;
+    case Destination::Sweep:
+      machine.transition<Sweep>();
+      break;
+    case Destination::Party:
+      machine.transition<Party>();
+      break;
+    case Destination::Chaos:
+      machine.transition<PartyChaos>();
+      break;
+    case Destination::Alert:
+      machine.transition<Alert>();
+      break;
+    }
   }
+  inline void resumeBase() { enterBase(base); }
 }
 
-inline void specialRender(const StateContext& ctx) {
-  switch (guyCommands::current.special) {
-    case guyCommands::Special::WorkIt: workIt<FaceMatrix>(ctx.elapsedMs); break;
-    case guyCommands::Special::HeartEyes: heartEyes<FaceMatrix>(ctx.elapsedMs); break;
-    default: break;
+inline void textRender(const StateContext &c)
+{
+  textAnimation<FaceMatrix>(c.elapsedMs);
+}
+inline void textEvents(Event e)
+{
+  if (e != Event::Tick)
+    return;
+  if (machine.elapsed() < textAnimationDuration<FaceMatrix>())
+    return;
+  if (guyCommands::current.hasNext)
+    guyControl::enterBase(guyCommands::current.next);
+  else
+    guyControl::resumeBase();
+}
+inline void specialRender(const StateContext &c)
+{
+  using guyCommands::Special;
+  switch (guyControl::activeSpecial)
+  {
+  case Special::WorkIt:
+    workIt<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::HeartEyes:
+    heartEyes<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Blink:
+    blinkEyes<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Wink:
+    winkEye<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::AngryEyes:
+    angryEyes<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Heartbeat:
+    heartbeat<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Glitch:
+    glitchFace<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Sleep:
+    sleepingEyes<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::Loading:
+    loadingFace<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::GreenHeart:
+    greenHeart<FaceMatrix>(c.elapsedMs);
+    break;
+  case Special::None:
+    break;
   }
 }
-inline void specialEvents(Event e) {
-  switch (e) {
-    case Event::Tick:
-      if (machine.finished()) machine.transition<IdleA>(4000);
-      break;
-    case Event::ButtonPressed:
-    case Event::ButtonLongHeld:
-      machine.transition<IdleA>(4000);
-      break;
-    case Event::ButtonDoublePressed:
-      machine.transition<Party>(3200);
-      break;
-  }
+inline void specialEvents(Event e)
+{
+  if (e == Event::Tick && machine.timed() && machine.finished())
+    guyControl::resumeBase();
 }
 
-// Called from main.cpp only in Guy Manuel's BLE build.
-inline void helmetOnTextMessage() {
-  guyCommands::parse(bluetoothText::message());
-  if (guyCommands::current.special == guyCommands::Special::WorkIt)
-    machine.transition<SpecialSequence>(7200);
-  else if (guyCommands::current.special == guyCommands::Special::HeartEyes)
-    machine.transition<SpecialSequence>(6000);
-  else if (guyText::current.message[0])
+// Called by main.cpp when the shared BLE inbox has a new complete message.
+// Unrecognized commands are ignored, leaving the current animation intact.
+inline void helmetOnTextMessage()
+{
+  if (!guyCommands::parse(bluetoothText::message()))
+    return;
+  using guyCommands::Kind;
+  switch (guyCommands::current.kind)
+  {
+  case Kind::DirectState:
+    guyControl::enterBase(guyCommands::current.next);
+    break;
+  case Kind::Text:
     machine.transition<Message>();
+    break;
+  case Kind::SpecialEffect:
+    guyControl::activeSpecial = guyCommands::current.special;
+    machine.transition<SpecialSequence>(guyCommands::duration(guyControl::activeSpecial));
+    break;
+  case Kind::Invalid:
+    break;
+  }
+}
+
+inline void startHelmet()
+{
+#ifdef DAFTY_ENABLE_BLE
+  guyControl::activeSpecial = guyCommands::Special::GreenHeart;
+  machine.transition<SpecialSequence>();
+#else
+  machine.transition<IdleA>(4000);
+#endif
 }
 #endif
