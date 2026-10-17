@@ -1,7 +1,7 @@
 #pragma once
 // Guy Manuel-only animations. Like shared effects, they draw pixels from elapsedMs.
 // No knowledge of commands, states, BLE, or the current helmet mode.
-#include "LEDLayouts.h"
+#include "../LEDLayouts.h"
 #include "Animations.h"
 #include "TextAnimations.h"
 

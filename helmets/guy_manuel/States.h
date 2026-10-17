@@ -9,9 +9,9 @@
 #include "StateMachine.h"
 #ifdef DAFTY_ENABLE_BLE
 #include "BluetoothText.h"
-#include "Commands.h"
-#include "SpecialAnimations.h"
-#include "TextAnimations.h"
+#include "commands/Commands.h"
+#include "animations/SpecialAnimations.h"
+#include "animations/TextAnimations.h"
 #endif
 
 // Forward declarations are required for compile-time state bindings.

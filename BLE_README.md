@@ -32,8 +32,8 @@ Ambient. Guy Manuel now uses only the 384-pixel matrix: no rings or ring effects
 
 ## Implementation
 
-- `helmets/guy_manuel/BluetoothText.h`: BLE receiver, fixed-size text buffer, no `String`.
-- `helmets/guy_manuel/TextAnimations.h`: GFX's built-in 5x7 font rendered through
+- `lib/DaftyBluetooth/src/BluetoothText.h`: BLE receiver, fixed-size text buffer, no `String`.
+- `helmets/guy_manuel/animations/TextAnimations.h`: GFX's built-in 5x7 font rendered through
   `FaceMatrix::setXY`, using the existing `pixels` buffer.
 - `src/main.cpp`: BLE init and nonblocking polling under `DAFTY_ENABLE_BLE`.
 - `helmets/guy_manuel/States.h`: only this helmet defines `Message` state and

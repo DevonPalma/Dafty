@@ -3,7 +3,7 @@
 // No NeoMatrix instance, extra framebuffer, or blocking scroll loop.
 #include <Adafruit_GFX.h>
 #include <string.h>
-#include "../Color.h"
+#include "../commands/TextConfig.h"
 
 template<class Layout>
 class MatrixTextCanvas : public Adafruit_GFX {
@@ -50,4 +50,40 @@ inline void matrixCenteredText(const char* message, Color ink) {
   const int32_t startX = (int32_t(Layout::width) - pixelWidth) / 2;
   canvas.setCursor(int16_t(startX < -32768L ? -32768L : startX), 0);
   canvas.print(message);
+}
+
+// Static centered text; no position changes or blinking. 48px fits ~8 chars.
+template<class Layout>
+inline void matrixStaticText(const char* message, Color ink) {
+  matrixCenteredText<Layout>(message, ink);
+}
+
+// Configured Guy Manuel text animation. States don't interpret draw modes.
+// main.cpp clears pixels before each render, so unlit pixels stay off.
+template<class Layout>
+inline void textAnimation(uint32_t elapsedMs) {
+  const guyText::Config& cfg = guyText::current;
+  switch (cfg.draw) {
+    case guyText::Draw::Scroll:
+      matrixScrollText<Layout>(cfg.message, cfg.color, elapsedMs, 75);
+      break;
+    case guyText::Draw::Static:
+      matrixStaticText<Layout>(cfg.message, cfg.color);
+      break;
+    case guyText::Draw::Blink:
+      if ((elapsedMs / 300UL) % 2UL == 0)
+        matrixCenteredText<Layout>(cfg.message, cfg.color);
+      break;
+  }
+}
+
+template<class Layout>
+inline uint32_t textAnimationDuration() {
+  switch (guyText::current.draw) {
+    case guyText::Draw::Scroll:
+      return matrixScrollDuration<Layout>(uint8_t(strlen(guyText::current.message)), 75);
+    case guyText::Draw::Static: return 2200;
+    case guyText::Draw::Blink: return 3000;
+  }
+  return 0;
 }

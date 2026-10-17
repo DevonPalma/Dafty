@@ -1,0 +1,8 @@
+{
+  "name": "DaftyButton",
+  "version": "1.0.0",
+  "build": {
+    "includeDir": "src",
+    "srcDir": "src"
+  }
+}
